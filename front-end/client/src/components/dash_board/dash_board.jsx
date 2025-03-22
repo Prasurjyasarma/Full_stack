@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "./dash_board.css";
+import { ACCESS_TOKEN } from "../../constants"; // Import the token constant
 
 const Dashboard = () => {
   // State to store the dashboard data
@@ -23,12 +24,21 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Helper function to get auth headers
+  const getAuthHeader = () => {
+    const token = localStorage.getItem(ACCESS_TOKEN);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   // Fetch data from the API
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const response = await axios.get(
-          "http://127.0.0.1:8000/api/tasks/dashboard/"
+          "http://127.0.0.1:8000/api/tasks/dashboard/",
+          {
+            headers: getAuthHeader(), // Add authentication headers
+          }
         );
         if (response.status === 200) {
           setDashboardData(response.data);

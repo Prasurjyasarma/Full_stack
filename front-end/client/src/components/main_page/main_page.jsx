@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./main_page.css";
 import axios from "axios";
+import { ACCESS_TOKEN, REFRESH_TOKEN } from "../../constants";
+import { useNavigate } from "react-router-dom";
 
 // TaskManager Component: Manages tasks, including adding, editing, deleting, and sorting tasks.
 const TaskManager = () => {
@@ -14,20 +16,29 @@ const TaskManager = () => {
     status: "pending",
   }); // Stores the new task being added
   const [editingTask, setEditingTask] = useState(null); // Stores the task being edited
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false); // Tracks if AI description generation is in progress
+  const [userFirstName, setUserFirstName] = useState("User"); // Stores the user's first name
 
-  // API key and URL for AI description generation
-  const API_KEY = "088876c3dd364dc8b9aeaf6e32c68b2a";
-  const API_URL = "https://api.aimlapi.com/v1";
+  // Initialize useNavigate for navigation
+  const navigate = useNavigate();
 
-  //! Fetch tasks from the server on component mount
+  // Get JWT token for authentication
+  const getAuthHeader = () => {
+    const token = localStorage.getItem(ACCESS_TOKEN);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  // Fetch tasks and user details on component mount
   useEffect(() => {
     fetchTasks();
+    fetchUserDetails();
   }, []);
 
+  // Fetch tasks from the server
   const fetchTasks = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/tasks/");
+      const response = await axios.get("http://127.0.0.1:8000/api/tasks/", {
+        headers: getAuthHeader(),
+      });
       if (response.status === 200) {
         setTasks(response.data);
       }
@@ -47,12 +58,29 @@ const TaskManager = () => {
     }
   };
 
-  //! Handles input changes in the new task form
+  // Fetch user details from the server
+  const fetchUserDetails = async () => {
+    try {
+      const response = await axios.get(
+        "http://127.0.0.1:8000/api/tasks/user_details/",
+        {
+          headers: getAuthHeader(),
+        }
+      );
+      if (response.status === 200 && response.data.first_name) {
+        setUserFirstName(response.data.first_name); // Set the user's first name
+      }
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+    }
+  };
+
+  // Handle input changes in the new task form
   const handleInputChange = (e) => {
     setNewTask({ ...newTask, [e.target.name]: e.target.value });
   };
 
-  // Handles adding a new task
+  // Handle adding a new task
   const handleAddTask = async (e) => {
     e.preventDefault();
 
@@ -64,7 +92,10 @@ const TaskManager = () => {
         // Attempt to add task to the backend
         const response = await axios.post(
           "http://127.0.0.1:8000/api/tasks/add/",
-          newTaskData
+          newTaskData,
+          {
+            headers: getAuthHeader(),
+          }
         );
 
         if (response.status === 201) {
@@ -97,18 +128,21 @@ const TaskManager = () => {
     }
   };
 
-  // Handles input changes in the edit task form
+  // Handle input changes in the edit task form
   const handleEditInputChange = (e) => {
     setEditingTask({ ...editingTask, [e.target.name]: e.target.value });
   };
 
-  // Handles deleting a task
+  // Handle deleting a task
   const handleDeleteTask = async (id) => {
     try {
       try {
         // Attempt to delete task from the backend
         const response = await axios.delete(
-          `http://127.0.0.1:8000/api/tasks/${id}/`
+          `http://127.0.0.1:8000/api/tasks/${id}/`,
+          {
+            headers: getAuthHeader(),
+          }
         );
         if (response.status === 204) {
           setTasks(tasks.filter((task) => task.id !== id)); // Remove the task from the UI
@@ -123,12 +157,12 @@ const TaskManager = () => {
     }
   };
 
-  // Handles editing a task
+  // Handle editing a task
   const handleEditTask = (task) => {
     setEditingTask(task); // Set the task to be edited
   };
 
-  // Handles updating a task
+  // Handle updating a task
   const handleUpdateTask = async (e) => {
     e.preventDefault();
 
@@ -142,7 +176,10 @@ const TaskManager = () => {
         // Attempt to update task on the backend
         const response = await axios.put(
           `http://127.0.0.1:8000/api/tasks/${editingTask.id}/`,
-          updatedTask
+          updatedTask,
+          {
+            headers: getAuthHeader(),
+          }
         );
 
         if (response.status === 200) {
@@ -166,7 +203,7 @@ const TaskManager = () => {
     }
   };
 
-  // Sorts tasks based on the current sort order
+  // Sort tasks based on the current sort order
   const sortTasks = () => {
     const sorted = [...tasks];
     if (sortOrder === "-priority") {
@@ -176,105 +213,25 @@ const TaskManager = () => {
     }
   };
 
-  // Handles changes in the sort order
+  // Handle changes in the sort order
   const handleSortChange = (e) => {
     setSortOrder(e.target.value);
   };
 
-  // Generates a description locally if the AI API fails
-  const generateLocalDescription = (title) => {
-    const templates = [
-      `Complete all required steps for "${title}". This task requires attention to detail and following established procedures.`,
-    ];
-
-    // Use the API key as a seed for "randomness"
-    const seed = API_KEY.split("").reduce(
-      (sum, char) => sum + char.charCodeAt(0),
-      0
-    );
-    const index = seed % templates.length;
-
-    return templates[index]; // Return a template with the title inserted
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem(ACCESS_TOKEN);
+    localStorage.removeItem(REFRESH_TOKEN);
+    navigate("/login"); // Redirect to the login page
   };
 
-  // Generates an AI description using the AI API
-  const generateAIDescription = async () => {
-    if (!newTask.title) {
-      alert("Please enter a task title first");
-      return;
-    }
-
-    setIsGeneratingDescription(true);
-
-    try {
-      // Call the AI API to generate a description
-      const response = await axios.post(
-        `${API_URL}/generate-description`,
-        {
-          title: newTask.title,
-          taskType: "general",
-          maxLength: 200,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${API_KEY}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data && response.data.description) {
-        setNewTask({ ...newTask, description: response.data.description });
-      } else {
-        // Fallback to local generation if API response is unexpected
-        console.warn(
-          "Unexpected API response format, using fallback:",
-          response.data
-        );
-        const fallbackDescription = generateLocalDescription(newTask.title);
-        setNewTask({ ...newTask, description: fallbackDescription });
-      }
-    } catch (error) {
-      console.error("Error calling AI API:", error);
-
-      // Try backend as a second fallback
-      try {
-        const backendResponse = await axios.post(
-          "http://127.0.0.1:8000/api/tasks/generate/",
-          { title: newTask.title }
-        );
-
-        if (
-          backendResponse.status === 200 &&
-          backendResponse.data.description
-        ) {
-          setNewTask({
-            ...newTask,
-            description: backendResponse.data.description,
-          });
-        } else {
-          throw new Error("Invalid backend response");
-        }
-      } catch (backendError) {
-        console.error("Backend fallback also failed:", backendError);
-
-        // Use local generation as a final fallback
-        const fallbackDescription = generateLocalDescription(newTask.title);
-        setNewTask({ ...newTask, description: fallbackDescription });
-      }
-    } finally {
-      setIsGeneratingDescription(false);
-    }
-  };
-
-  // Render the TaskManager component
   return (
     <div>
       {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-left">
           <a href="#" className="user-name">
-            Hi, User
+            Hi, {userFirstName}
           </a>
           <a href="/history" className="history-link">
             History
@@ -284,9 +241,9 @@ const TaskManager = () => {
           </a>
         </div>
         <div className="navbar-right">
-          <a href="#" className="logout-btn">
-            Lgout
-          </a>
+          <button onClick={handleLogout} className="logout-btn">
+            Logout
+          </button>
         </div>
       </nav>
 
@@ -307,32 +264,15 @@ const TaskManager = () => {
         />
 
         <label htmlFor="description">Description</label>
-        <div className="description-container" style={{ position: "relative" }}>
-          <textarea
-            name="description"
-            id="description"
-            className="form-control"
-            placeholder="Enter the description"
-            value={newTask.description}
-            onChange={handleInputChange}
-            style={{ width: "100%" }}
-          ></textarea>
-          <button
-            type="button"
-            className="btn-ai"
-            onClick={generateAIDescription}
-            title="Generate AI Description"
-            disabled={isGeneratingDescription || !newTask.title}
-            style={{
-              position: "absolute",
-              right: "10px",
-              top: "10px",
-              opacity: isGeneratingDescription ? 0.5 : 1,
-            }}
-          >
-            {isGeneratingDescription ? "⏳" : "✨"}
-          </button>
-        </div>
+        <textarea
+          name="description"
+          id="description"
+          className="form-control"
+          placeholder="Enter the description"
+          value={newTask.description}
+          onChange={handleInputChange}
+          style={{ width: "100%" }}
+        ></textarea>
 
         <label htmlFor="priority">Priority (1-5)</label>
         <input

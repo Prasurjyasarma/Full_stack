@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import "../main_page/main_page.css"; // Ensure this CSS file exists
+import "../main_page/main_page.css";
+import { ACCESS_TOKEN } from "../../constants";
 
 const TaskCardHistory = ({ onDelete }) => {
   const [tasks, setTasks] = useState([]);
+
+  // Helper function to get auth headers
+  const getAuthHeader = () => {
+    const token = localStorage.getItem(ACCESS_TOKEN);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   // Fetch tasks when the component mounts
   useEffect(() => {
@@ -13,13 +20,40 @@ const TaskCardHistory = ({ onDelete }) => {
   const fetchTasks = async () => {
     try {
       const response = await axios.get(
-        "http://127.0.0.1:8000/api/tasks/completed/"
+        "http://127.0.0.1:8000/api/tasks/completed/",
+        {
+          headers: getAuthHeader(), // Add auth headers
+        }
       );
       if (response.status === 200) {
         setTasks(response.data);
       }
     } catch (error) {
       console.error("Error fetching tasks:", error);
+    }
+  };
+
+  // Add delete function with auth headers
+  const handleDelete = async (id) => {
+    try {
+      const response = await axios.delete(
+        `http://127.0.0.1:8000/api/tasks/${id}/`,
+        {
+          headers: getAuthHeader(), // Add auth headers
+        }
+      );
+
+      if (response.status === 204) {
+        // Remove the task from the local state
+        setTasks(tasks.filter((task) => task.id !== id));
+
+        // Call parent component's onDelete if provided
+        if (onDelete) {
+          onDelete(id);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
     }
   };
 
@@ -42,7 +76,7 @@ const TaskCardHistory = ({ onDelete }) => {
                 <div className="task-actions">
                   <button
                     className="btn-delete"
-                    onClick={() => onDelete(task.id)}
+                    onClick={() => handleDelete(task.id)} // Use the local handleDelete function
                     title="Delete Task"
                   >
                     Delete
