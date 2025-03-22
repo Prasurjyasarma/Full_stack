@@ -1,0 +1,29 @@
+body {
+  font-family: "Inter", sans-serif;
+  color: #ffffff;
+  margin: 0;
+  overflow-x: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(51, 27, 141, 0.8), transparent 30%),
+    linear-gradient(180deg, rgb(15, 15, 15) 80%, rgba(47, 21, 139, 0.8) 130%);
+  background-attachment: fixed;
+  color: #ffffff;
+}
+
+@keyframes glow {
+  0% {
+    background-position: top;
+  }
+  100% {
+    background-position: bottom;
+  }
+}
+
+body {
+  background-size: 150% 250%;
+  animation: glow 30s infinite alternate ease-in-out;
+}
