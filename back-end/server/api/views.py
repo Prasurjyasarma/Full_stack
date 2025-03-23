@@ -14,7 +14,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 import requests
 
 
-
+"""
+User registration view that allows creating new user accounts.
+Uses AllowAny permission to allow registration without authentication.
+"""
 @permission_classes([AllowAny])
 class UserRegistrationView(generics.CreateAPIView):
     queryset=User.objects.all()
@@ -22,8 +25,11 @@ class UserRegistrationView(generics.CreateAPIView):
     permission_classes=[AllowAny]
 
 
-
 #! log in a user
+"""
+Authenticates a user and provides JWT tokens for access.
+Requires username and password in the request data.
+"""
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @api_view(['POST'])
@@ -55,20 +61,13 @@ def login_user(request):
         'email': user.email
     }, status=status.HTTP_200_OK)
 
-#! log out a user  
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def user_logout(request):
-  
-#     Token.objects.filter(user=request.user).delete()
-    
-#     return Response({
-#         'message': 'Successfully logged out'
-#     }, status=status.HTTP_200_OK)
 
 
 
 #! view the pending and in progress tasks
+"""
+Gets all tasks with 'pending' or 'in_progress' status for the authenticated user.
+"""
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def view_tasks(request):
@@ -77,6 +76,9 @@ def view_tasks(request):
     return Response(serialized_tasks,status=status.HTTP_200_OK)
 
 #! view the completed tasks
+"""
+Gets all tasks with 'completed' status for the authenticated user.
+"""
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def completed_tasks(request):
@@ -86,6 +88,10 @@ def completed_tasks(request):
 
     
 #! add a task
+"""
+Creates a new task for the authenticated user.
+Validates task data through the TaskSerializer.
+"""
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_task(request):
@@ -98,6 +104,10 @@ def add_task(request):
 
 
 #! delele and edit the task 
+"""
+Updates or deletes a task with the specified ID.
+Only allows the task owner to modify their own tasks.
+"""
 @api_view(['PUT',"DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_edit_task(request, id):
@@ -128,6 +138,10 @@ def delete_edit_task(request, id):
         )
     
 #! Dashboard    
+"""
+Provides task statistics for the authenticated user.
+Counts total, completed, pending, and in-progress tasks.
+"""
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])   
 def dash_board(request):
@@ -148,6 +162,10 @@ def dash_board(request):
       
       
 #! Current user details
+"""
+Retrieves details about the currently authenticated user.
+Currently returns only the user's first name.
+"""
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])   
 def user_details(request):
@@ -158,5 +176,3 @@ def user_details(request):
         },
         status=status.HTTP_200_OK,
     )
-        
-

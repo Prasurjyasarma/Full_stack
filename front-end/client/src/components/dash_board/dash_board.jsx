@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../api"; // Import the api instance
 import {
   PieChart,
   Pie,
@@ -9,7 +9,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "./dash_board.css";
-import { ACCESS_TOKEN } from "../../constants"; // Import the token constant
 
 const Dashboard = () => {
   // State to store the dashboard data
@@ -24,22 +23,11 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Helper function to get auth headers
-  const getAuthHeader = () => {
-    const token = localStorage.getItem(ACCESS_TOKEN);
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
   // Fetch data from the API
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await axios.get(
-          "http://127.0.0.1:8000/api/tasks/dashboard/",
-          {
-            headers: getAuthHeader(), // Add authentication headers
-          }
-        );
+        const response = await api.get("/api/tasks/dashboard/");
         if (response.status === 200) {
           setDashboardData(response.data);
         }
@@ -63,6 +51,36 @@ const Dashboard = () => {
 
   // Colors for the pie chart segments
   const COLORS = ["#00C49F", "#FFBB28", "#0088FE"];
+
+  // Custom label renderer to show percentages inside pie chart
+  const renderCustomizedLabel = ({
+    cx,
+    cy,
+    midAngle,
+    innerRadius,
+    outerRadius,
+    percent,
+  }) => {
+    const RADIAN = Math.PI / 180;
+    // Calculate the position for the text
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontWeight="bold"
+        data-aos="fade-in"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
 
   // Display loading or error messages
   if (loading) {
@@ -90,9 +108,7 @@ const Dashboard = () => {
               fill="#8884d8"
               dataKey="value"
               nameKey="name"
-              label={({ name, percent }) =>
-                `${name}: ${(percent * 100).toFixed(2)}%`
-              }
+              label={renderCustomizedLabel}
             >
               {pieChartData.map((entry, index) => (
                 <Cell
@@ -101,14 +117,14 @@ const Dashboard = () => {
                 />
               ))}
             </Pie>
-            <Tooltip />
+            <Tooltip formatter={(value, name) => [`${value} tasks`, name]} />
             <Legend />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
       {/* Statistics Section */}
-      <div className="dashboard-stats">
+      <div className="dashboard-stats" data-aos="fade-up">
         {/* Total Tasks */}
         <div className="stat-card total-tasks">
           <h2>Total Tasks</h2>

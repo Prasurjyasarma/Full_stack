@@ -1,44 +1,30 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import "./main_page.css";
-import axios from "axios";
+import api from "../../api";
 import { ACCESS_TOKEN, REFRESH_TOKEN } from "../../constants";
 import { useNavigate } from "react-router-dom";
 
-// TaskManager Component: Manages tasks, including adding, editing, deleting, and sorting tasks.
 const TaskManager = () => {
   // State variables
-  const [tasks, setTasks] = useState([]); // Stores the list of tasks
-  const [sortOrder, setSortOrder] = useState("-priority"); // Stores the current sorting order
+  const [tasks, setTasks] = useState([]);
+  const [sortOrder, setSortOrder] = useState("-priority");
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
     priority: "",
     status: "pending",
-  }); // Stores the new task being added
-  const [editingTask, setEditingTask] = useState(null); // Stores the task being edited
-  const [userFirstName, setUserFirstName] = useState("User"); // Stores the user's first name
+  });
+  const [editingTask, setEditingTask] = useState(null); // Track the task being edited
+  const [userFirstName, setUserFirstName] = useState("User");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false); // New state for modal visibility
 
-  // Initialize useNavigate for navigation
   const navigate = useNavigate();
 
-  // Get JWT token for authentication
-  const getAuthHeader = () => {
-    const token = localStorage.getItem(ACCESS_TOKEN);
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
-  // Fetch tasks and user details on component mount
-  useEffect(() => {
-    fetchTasks();
-    fetchUserDetails();
-  }, []);
-
   // Fetch tasks from the server
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/tasks/", {
-        headers: getAuthHeader(),
-      });
+      const response = await api.get("/api/tasks/");
       if (response.status === 200) {
         setTasks(response.data);
       }
@@ -56,24 +42,25 @@ const TaskManager = () => {
         },
       ]);
     }
-  };
+  }, []);
 
   // Fetch user details from the server
-  const fetchUserDetails = async () => {
+  const fetchUserDetails = useCallback(async () => {
     try {
-      const response = await axios.get(
-        "http://127.0.0.1:8000/api/tasks/user_details/",
-        {
-          headers: getAuthHeader(),
-        }
-      );
+      const response = await api.get("/api/tasks/user_details/");
       if (response.status === 200 && response.data.first_name) {
-        setUserFirstName(response.data.first_name); // Set the user's first name
+        setUserFirstName(response.data.first_name);
       }
     } catch (error) {
       console.error("Error fetching user details:", error);
     }
-  };
+  }, []);
+
+  // Fetch tasks and user details on component mount
+  useEffect(() => {
+    fetchTasks();
+    fetchUserDetails();
+  }, [fetchTasks, fetchUserDetails]);
 
   // Handle input changes in the new task form
   const handleInputChange = (e) => {
@@ -90,13 +77,7 @@ const TaskManager = () => {
 
       try {
         // Attempt to add task to the backend
-        const response = await axios.post(
-          "http://127.0.0.1:8000/api/tasks/add/",
-          newTaskData,
-          {
-            headers: getAuthHeader(),
-          }
-        );
+        const response = await api.post("/api/tasks/add/", newTaskData);
 
         if (response.status === 201) {
           fetchTasks(); // Refresh tasks from server
@@ -128,38 +109,15 @@ const TaskManager = () => {
     }
   };
 
+  // Handle editing a task - Now opens the modal
+  const handleEditTask = (task) => {
+    setEditingTask(task); // Set the task to be edited
+    setShowEditModal(true); // Show the modal
+  };
+
   // Handle input changes in the edit task form
   const handleEditInputChange = (e) => {
     setEditingTask({ ...editingTask, [e.target.name]: e.target.value });
-  };
-
-  // Handle deleting a task
-  const handleDeleteTask = async (id) => {
-    try {
-      try {
-        // Attempt to delete task from the backend
-        const response = await axios.delete(
-          `http://127.0.0.1:8000/api/tasks/${id}/`,
-          {
-            headers: getAuthHeader(),
-          }
-        );
-        if (response.status === 204) {
-          setTasks(tasks.filter((task) => task.id !== id)); // Remove the task from the UI
-        }
-      } catch (error) {
-        console.error("Error deleting task from backend:", error);
-        // Fallback: Delete task locally if server is down
-        setTasks(tasks.filter((task) => task.id !== id));
-      }
-    } catch (error) {
-      console.error("Error in delete task process:", error);
-    }
-  };
-
-  // Handle editing a task
-  const handleEditTask = (task) => {
-    setEditingTask(task); // Set the task to be edited
   };
 
   // Handle updating a task
@@ -167,19 +125,14 @@ const TaskManager = () => {
     e.preventDefault();
 
     try {
-      const updatedTask = {
-        ...editingTask,
-      };
+      const updatedTask = { ...editingTask };
       console.log("Updating task:", updatedTask);
 
       try {
         // Attempt to update task on the backend
-        const response = await axios.put(
-          `http://127.0.0.1:8000/api/tasks/${editingTask.id}/`,
-          updatedTask,
-          {
-            headers: getAuthHeader(),
-          }
+        const response = await api.put(
+          `/api/tasks/${editingTask.id}/`,
+          updatedTask
         );
 
         if (response.status === 200) {
@@ -198,24 +151,74 @@ const TaskManager = () => {
       }
 
       setEditingTask(null); // Clear the editing task
+      setShowEditModal(false); // Hide the modal
     } catch (error) {
       console.error("Error in update task process:", error);
     }
   };
 
-  // Sort tasks based on the current sort order
-  const sortTasks = () => {
-    const sorted = [...tasks];
+  // Handle canceling edit
+  const handleCancelEdit = () => {
+    setEditingTask(null);
+    setShowEditModal(false); // Hide the modal
+  };
+
+  // Close modal when clicking outside of it
+  const handleModalOutsideClick = (e) => {
+    if (e.target.classList.contains("modal-overlay")) {
+      handleCancelEdit();
+    }
+  };
+
+  // Handle deleting a task
+  const handleDeleteTask = async (id) => {
+    try {
+      try {
+        // Attempt to delete task from the backend
+        const response = await api.delete(`/api/tasks/${id}/`);
+        if (response.status === 204) {
+          setTasks(tasks.filter((task) => task.id !== id));
+        }
+      } catch (error) {
+        console.error("Error deleting task from backend:", error);
+        // Fallback: Delete task locally if server is down
+        setTasks(tasks.filter((task) => task.id !== id));
+      }
+    } catch (error) {
+      console.error("Error in delete task process:", error);
+    }
+  };
+
+  // Handle search term changes
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Filter tasks by search term and then sort them
+  const getFilteredAndSortedTasks = () => {
+    // First filter by search term
+    const filtered = searchTerm
+      ? tasks.filter((task) =>
+          task.title.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : tasks;
+
+    // Then sort the filtered tasks
     if (sortOrder === "-priority") {
-      return sorted.sort((a, b) => b.priority - a.priority); // High to low priority
+      return [...filtered].sort((a, b) => b.priority - a.priority); // High to low priority
     } else {
-      return sorted.sort((a, b) => a.priority - b.priority); // Low to high priority
+      return [...filtered].sort((a, b) => a.priority - b.priority); // Low to high priority
     }
   };
 
   // Handle changes in the sort order
   const handleSortChange = (e) => {
     setSortOrder(e.target.value);
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setSearchTerm("");
   };
 
   // Logout function
@@ -228,7 +231,7 @@ const TaskManager = () => {
   return (
     <div>
       {/* Navbar */}
-      <nav className="navbar">
+      <nav className="navbar" data-aos="fade-down">
         <div className="navbar-left">
           <a href="#" className="user-name">
             Hi, {userFirstName}
@@ -250,7 +253,7 @@ const TaskManager = () => {
       <h1>Task Manager 📝</h1>
 
       {/* Task Form */}
-      <form className="task-form" onSubmit={handleAddTask}>
+      <form className="task-form" onSubmit={handleAddTask} data-aos="fade-in">
         <label htmlFor="title">Task Title</label>
         <input
           type="text"
@@ -306,8 +309,8 @@ const TaskManager = () => {
         </button>
       </form>
 
-      {/* Sorting and Delete All Controls */}
-      <div className="controls-container">
+      {/* Sorting  */}
+      <div className="controls-container" data-aos="fade-up">
         <form className="sort-form">
           <label htmlFor="sort">Sort by: </label>
           <select
@@ -316,87 +319,44 @@ const TaskManager = () => {
             value={sortOrder}
             onChange={handleSortChange}
           >
-            <option value="-priority">High to Low</option>
-            <option value="priority">Low to High</option>
+            <option value="-priority">High to Low Priority</option>
+            <option value="priority">Low to High Priority</option>
           </select>
         </form>
       </div>
 
-      {/* Task List */}
-      <div className="task-container">
-        {/* Edit Task Form (Hidden by default) */}
-        {editingTask && (
-          <form className="task-form edit-form" onSubmit={handleUpdateTask}>
-            <label htmlFor="edit-title">Task Title</label>
-            <input
-              type="text"
-              name="title"
-              id="edit-title"
-              className="form-control"
-              placeholder="Enter a task"
-              value={editingTask.title}
-              onChange={handleEditInputChange}
-              required
-            />
-
-            <label htmlFor="edit-description">Description</label>
-            <textarea
-              name="description"
-              id="edit-description"
-              className="form-control"
-              placeholder="Enter the description"
-              value={editingTask.description || ""}
-              onChange={handleEditInputChange}
-            ></textarea>
-
-            <label htmlFor="edit-priority">Priority (1-5)</label>
-            <input
-              type="number"
-              name="priority"
-              id="edit-priority"
-              className="form-control"
-              min="1"
-              max="5"
-              placeholder="Enter your priority"
-              value={editingTask.priority}
-              onChange={handleEditInputChange}
-              required
-            />
-
-            <label htmlFor="edit-status">Status</label>
-            <select
-              name="status"
-              id="edit-status"
-              className="form-control"
-              value={editingTask.status}
-              onChange={handleEditInputChange}
-            >
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-
-            <div className="edit-buttons">
-              <button type="submit" className="btn btn-primary">
-                Update Task
-              </button>
-              <button
-                type="button"
-                className="btn btn-cancel"
-                onClick={() => setEditingTask(null)}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+      {/* Search Bar */}
+      <div className="search-container" data-aos="fade-up">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Search tasks by title..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+        {searchTerm && (
+          <button className="clear-search" onClick={handleClearSearch}>
+            ✕
+          </button>
         )}
+      </div>
 
-        {sortTasks().length === 0 ? (
+      {/* Task List */}
+      <div className="task-container" data-aos="fade-up">
+        {/* Display search results or "no results" message */}
+        {getFilteredAndSortedTasks().length === 0 ? (
           <div className="no-tasks">
-            <p>No tasks found. Add a task to get started!</p>
+            {searchTerm ? (
+              <p>
+                No tasks found matching "{searchTerm} 🥲". Try a different
+                search term.
+              </p>
+            ) : (
+              <p>No tasks found. Add a task to get started 😀!</p>
+            )}
           </div>
         ) : (
-          sortTasks().map((task) => (
+          getFilteredAndSortedTasks().map((task) => (
             <div
               key={task.id}
               className={`task-card priority-${task.priority}`}
@@ -425,11 +385,13 @@ const TaskManager = () => {
                   {task.status.replace("_", " ")}
                 </span>
               </div>
+
               <div className="task-body">
                 <p className="task-description">
                   {task.description || "No description provided."}
                 </p>
               </div>
+
               <div className="task-footer">
                 <span className="task-priority">Priority: {task.priority}</span>
                 <span className="task-date">
@@ -440,6 +402,87 @@ const TaskManager = () => {
           ))
         )}
       </div>
+
+      {/* Edit Task Modal */}
+      {showEditModal && editingTask && (
+        <div className="modal-overlay" onClick={handleModalOutsideClick}>
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Edit Task</h2>
+              <button className="modal-close" onClick={handleCancelEdit}>
+                ×
+              </button>
+            </div>
+            <form className="edit-form" onSubmit={handleUpdateTask}>
+              <label htmlFor={`edit-title-${editingTask.id}`}>Task Title</label>
+              <input
+                type="text"
+                name="title"
+                id={`edit-title-${editingTask.id}`}
+                className="form-control"
+                placeholder="Enter a task"
+                value={editingTask.title}
+                onChange={handleEditInputChange}
+                required
+              />
+
+              <label htmlFor={`edit-description-${editingTask.id}`}>
+                Description
+              </label>
+              <textarea
+                name="description"
+                id={`edit-description-${editingTask.id}`}
+                className="form-control"
+                placeholder="Enter the description"
+                value={editingTask.description || ""}
+                onChange={handleEditInputChange}
+              ></textarea>
+
+              <label htmlFor={`edit-priority-${editingTask.id}`}>
+                Priority (1-5)
+              </label>
+              <input
+                type="number"
+                name="priority"
+                id={`edit-priority-${editingTask.id}`}
+                className="form-control"
+                min="1"
+                max="5"
+                placeholder="Enter your priority"
+                value={editingTask.priority}
+                onChange={handleEditInputChange}
+                required
+              />
+
+              <label htmlFor={`edit-status-${editingTask.id}`}>Status</label>
+              <select
+                name="status"
+                id={`edit-status-${editingTask.id}`}
+                className="form-control"
+                value={editingTask.status}
+                onChange={handleEditInputChange}
+              >
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+
+              <div className="edit-buttons">
+                <button type="submit" className="btn btn-primary">
+                  Update Task
+                </button>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={handleCancelEdit}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="footer">

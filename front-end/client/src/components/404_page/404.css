@@ -1,0 +1,162 @@
+/* Container for the 404 page */
+.not-found-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  min-width: 100vw;
+  text-align: center;
+  background: radial-gradient(circle, rgb(33, 68, 128), #000);
+}
+
+/* Content Wrapper */
+.not-found-content {
+  max-width: 600px;
+  padding: 20px;
+}
+
+/* Title */
+.not-found-title {
+  font-size: 120px;
+  margin: 0;
+  color: rgb(223, 191, 64); /* Bright yellow for visibility */
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* Subtitle */
+.not-found-subtitle {
+  font-size: 36px;
+  margin: 10px 0;
+  color: #ffcc00;
+  text-shadow: 0 0 5px #ffcc00, 0 0 10px #ffcc00;
+}
+
+/* Message */
+.not-found-message {
+  font-size: 18px;
+  margin: 20px 0;
+  color: #fff;
+}
+
+/* Alien Animation */
+.alien-animation {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 40px auto;
+  animation: spin 5s linear infinite;
+}
+
+.alien-head {
+  width: 100px;
+  height: 100px;
+  background-color: #00ff88; /* Neon green alien */
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 25px;
+  box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+}
+
+.alien-body {
+  width: 120px;
+  height: 60px;
+  background-color: #00ff88;
+  border-radius: 50%;
+  position: absolute;
+  top: 80px;
+  left: 15px;
+  box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+}
+
+.alien-antenna {
+  width: 10px;
+  height: 40px;
+  background-color: #00ff88;
+  position: absolute;
+  top: -20px;
+  left: 70px;
+  transform: rotate(-20deg);
+  box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Button */
+.not-found-button {
+  padding: 12px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  color: rgb(41, 77, 139);
+  background-color: #ffcc00;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 0 10px #ffcc00, 0 0 20px #ffcc00;
+}
+
+.not-found-button:hover {
+  background-color: #ffdd55;
+  transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .not-found-title {
+    font-size: 80px;
+  }
+
+  .not-found-subtitle {
+    font-size: 24px;
+  }
+
+  .not-found-message {
+    font-size: 16px;
+  }
+
+  .alien-animation {
+    width: 100px;
+    height: 100px;
+  }
+
+  .alien-head {
+    width: 70px;
+    height: 70px;
+    left: 15px;
+  }
+
+  .alien-body {
+    width: 90px;
+    height: 45px;
+    top: 60px;
+    left: 5px;
+  }
+
+  .alien-antenna {
+    top: -15px;
+    left: 45px;
+  }
+
+  .not-found-button {
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+}

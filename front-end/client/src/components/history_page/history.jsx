@@ -1,30 +1,19 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../api";
 import "../main_page/main_page.css";
-import { ACCESS_TOKEN } from "../../constants";
 
 const TaskCardHistory = ({ onDelete }) => {
   const [tasks, setTasks] = useState([]);
-
-  // Helper function to get auth headers
-  const getAuthHeader = () => {
-    const token = localStorage.getItem(ACCESS_TOKEN);
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
 
   // Fetch tasks when the component mounts
   useEffect(() => {
     fetchTasks();
   }, []);
 
+  // Fetch completed tasks from the server
   const fetchTasks = async () => {
     try {
-      const response = await axios.get(
-        "http://127.0.0.1:8000/api/tasks/completed/",
-        {
-          headers: getAuthHeader(), // Add auth headers
-        }
-      );
+      const response = await api.get("/api/tasks/completed/"); // Use the api instance
       if (response.status === 200) {
         setTasks(response.data);
       }
@@ -33,15 +22,10 @@ const TaskCardHistory = ({ onDelete }) => {
     }
   };
 
-  // Add delete function with auth headers
+  // Handle deleting a task
   const handleDelete = async (id) => {
     try {
-      const response = await axios.delete(
-        `http://127.0.0.1:8000/api/tasks/${id}/`,
-        {
-          headers: getAuthHeader(), // Add auth headers
-        }
-      );
+      const response = await api.delete(`/api/tasks/${id}/`); // Use the api instance
 
       if (response.status === 204) {
         // Remove the task from the local state
@@ -60,7 +44,7 @@ const TaskCardHistory = ({ onDelete }) => {
   return (
     <>
       <h1>History</h1>
-      <div className="task-container">
+      <div className="task-container" data-aos="fade-up">
         {tasks.length === 0 ? (
           <div className="no-tasks">
             <p>No tasks found. Add a task to get started!</p>
