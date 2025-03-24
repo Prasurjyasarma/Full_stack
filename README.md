@@ -30,7 +30,7 @@
 
 👉 List of technologies/libraries used:
 
-  ✅ Backend: SQLLite, Django, DjangoREST Frame work, JWS Token
+  ✅ Backend: SQLLite, Django, DjangoREST Frame work, JWT Token
   ✅ Frontend: React
 
 
